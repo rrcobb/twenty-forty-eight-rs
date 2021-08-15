@@ -7,7 +7,6 @@ use winit_input_helper::WinitInputHelper;
 
 const WIDTH: u32 = 720;
 const HEIGHT: u32 = 720;
-const BOX_SIZE: i16 = 64;
 
 fn main() -> Result<(), Error> {
     let event_loop = EventLoop::new();
@@ -63,68 +62,68 @@ fn main() -> Result<(), Error> {
     });
 }
 
-/// Representation of the application state. In this example, a box will bounce around the screen.
+/// Representation of the application state
+/// 4x4 grid of values
 struct World {
-    box_x: i16,
-    box_y: i16,
-    velocity_x: i16,
-    velocity_y: i16,
+    values: [[Option<u32>; 4]; 4],
 }
 
 impl World {
-    /// Create a new `World` instance that can draw a moving box.
+    /// Create a new `World` instance with empty values
     fn new() -> Self {
-        Self {
-            box_x: 24,
-            box_y: 16,
-            velocity_x: 0,
-            velocity_y: 0,
-        }
+        let mut empty = Self {
+            values: [[None; 4]; 4]
+        };
+        empty.add_random_block();
+        empty
     }
 
-    /// Update the `World` internal state; bounce the box around the screen.
-    fn update(&mut self, input: &WinitInputHelper) {
-        if self.box_x <= 0 || self.box_x + BOX_SIZE > WIDTH as i16 {
-            self.velocity_x *= -1;
-        }
-        if self.box_y <= 0 || self.box_y + BOX_SIZE > HEIGHT as i16 {
-            self.velocity_y *= -1;
-        }
+    fn add_random_block(&mut self) {
+        // put a Some where one of the None's are
+        self.values[0][0] = Some(2);
+    }
 
+    /// Update the `World` internal state; move the game and add a new box
+    fn update(&mut self, input: &WinitInputHelper) {
         if input.key_pressed(VirtualKeyCode::Down) {
-            self.velocity_y += 1;
         }
         if input.key_pressed(VirtualKeyCode::Up) {
-            self.velocity_y -= 1;
         }
         if input.key_pressed(VirtualKeyCode::Left) {
-            self.velocity_x -= 1;
         }
         if input.key_pressed(VirtualKeyCode::Right) {
-            self.velocity_x += 1;
         }
-
-        self.box_x += self.velocity_x;
-        self.box_y += self.velocity_y;
+        self.add_random_block();
     }
 
     /// Draw the `World` state to the frame buffer.
     ///
     /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
     fn draw(&self, frame: &mut [u8]) {
+        let cell_width = (WIDTH / 4) as i16;
+
+        // for each of the cells in values
+        // check whether this pixel is in that cell
+        // TODO: flip to iterate through values instead of through pixels
+        // TODO: Add gutter between items
         for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
             let x = (i % WIDTH as usize) as i16;
             let y = (i / WIDTH as usize) as i16;
 
-            let inside_the_box = x >= self.box_x
-                && x < self.box_x + BOX_SIZE
-                && y >= self.box_y
-                && y < self.box_y + BOX_SIZE;
-
-            let rgba = if inside_the_box {
-                [0x5e, 0x48, 0xe8, 0xff]
-            } else {
-                [0x48, 0xb2, 0xe8, 0xff]
+            let rgba = match self.values[(x / cell_width) as usize][(y / cell_width) as usize] {
+                None => [0x00, 0x00, 0x00, 0xff],
+                Some(2) => [0xee, 0xe4, 0xda, 0xff],
+                Some(4) => [0xee, 0xe1, 0xc9, 0xff],
+                Some(8) => [0xf3, 0xb2, 0x7a, 0xff],
+                Some(16) => [0xf6, 0x96, 0x64, 0xff],
+                Some(32) => [0xf7, 0x7c, 0x5f, 0xff],
+                Some(64) => [0xf7, 0x5f, 0x3b, 0xff], // f75f3b
+                Some(128) => [0xed, 0xd0, 0x73, 0xff],
+                Some(256) => [0xed, 0xcc, 0x62, 0xff],
+                Some(512) => [0xed, 0xc9, 0x50, 0xff], // edc950
+                Some(1024) => [0xed, 0xc5, 0x3f, 0xff], // edc53f
+                Some(2048) => [0xed, 0xc2, 0x2e, 0xff], // edc22e
+                Some(_) => [0x48, 0xb2, 0xe8, 0xff], 
             };
 
             pixel.copy_from_slice(&rgba);
