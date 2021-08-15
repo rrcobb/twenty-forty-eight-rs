@@ -80,18 +80,55 @@ impl World {
 
     fn add_random_block(&mut self) {
         // put a Some where one of the None's are
-        self.values[0][0] = Some(2);
+        self.values[2][1] = Some(2);
     }
 
-    /// Update the `World` internal state; move the game and add a new box
+    /// Update the `World` internal state; coalesce and add a new box
     fn update(&mut self, input: &WinitInputHelper) {
         if input.key_pressed(VirtualKeyCode::Down) {
+            for i in 0..self.values.len() {
+                self.values[i] = coalesce(self.values[i]);
+            }
         }
+        // need to reverse before and after?
         if input.key_pressed(VirtualKeyCode::Up) {
-        }
-        if input.key_pressed(VirtualKeyCode::Left) {
+            for i in 0..self.values.len() {
+                let mut values = self.values[i];
+                values.reverse();
+                values = coalesce(values);
+                values.reverse();
+                self.values[i] = values;
+            }
         }
         if input.key_pressed(VirtualKeyCode::Right) {
+            for i in 0..self.values[0].len() {
+                let mut values = [
+                    self.values[0][i],
+                    self.values[1][i],
+                    self.values[2][i],
+                    self.values[3][i],
+                ];
+                values = coalesce(values);
+                self.values[0][i] = values[0];
+                self.values[1][i] = values[1];
+                self.values[2][i] = values[2];
+                self.values[3][i] = values[3];
+            }
+        }
+        if input.key_pressed(VirtualKeyCode::Left) {
+            for i in 0..self.values[0].len() {
+                let mut values = [
+                    self.values[3][i],
+                    self.values[2][i],
+                    self.values[1][i],
+                    self.values[0][i],
+                ];
+                values = coalesce(values);
+                self.values[3][i] = values[0];
+                self.values[2][i] = values[1];
+                self.values[1][i] = values[2];
+                self.values[0][i] = values[3];
+            }
         }
         self.add_random_block();
     }
@@ -128,5 +165,86 @@ impl World {
 
             pixel.copy_from_slice(&rgba);
         }
+    }
+}
+
+fn coalesce(mut cells: [Option<u32>; 4]) -> [Option<u32>; 4] {
+    let mut merged = [false; 4];
+    for index in 0..4 {
+        let i = 3 - index;
+        let item = cells[i];
+        let mut next_i = i + 1;
+        if let Some(val) = item {
+            // while not out of bounds and the next cell is empty
+            while let Some(None) = cells.get(next_i) {
+                // move right
+                cells[next_i - 1] = None;
+                cells[next_i] = item;
+                next_i += 1;
+            }
+            // if there is an opportunity to merge right, do so
+            if let Some(Some(_)) = cells.get(next_i) {
+                // check that we haven't merged that spot yet
+                if !merged[next_i] && Some(val) == cells[next_i] {
+                    cells[next_i - 1] = None;
+                    cells[next_i] = Some(val + val);
+                    merged[next_i] = true;
+                }
+            }
+        }
+    }
+    cells
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::coalesce;
+    #[test]
+    fn coalesce_nones() {
+        let mut arr = [None, None, None, None];
+        coalesce(&mut arr);
+        assert_eq!(arr, [None, None, None, None]);
+    }
+
+    #[test]
+    fn coalesce_one() {
+        let mut arr = [None, None, None, Some(1)];
+        coalesce(&mut arr);
+        assert_eq!(arr, [None, None, None, Some(1)]);
+    }
+
+    #[test]
+    fn coalesce_right() {
+        let mut arr = [None, None, Some(1), None];
+        coalesce(&mut arr);
+        assert_eq!(arr, [None, None, None, Some(1)]);
+    }
+
+    #[test]
+    fn coalesce_add() {
+        let mut arr = [None, None, Some(1), Some(1)];
+        coalesce(&mut arr);
+        assert_eq!(arr, [None, None, None, Some(2)]);
+    }
+
+    #[test]
+    fn coalesce_add_extra() {
+        let mut arr = [None, Some(1), Some(1), Some(1)];
+        coalesce(&mut arr);
+        assert_eq!(arr, [None, None, Some(1), Some(2)]);
+    }
+
+    #[test]
+    fn coalesce_all_ones() {
+        let mut arr = [Some(1), Some(1), Some(1), Some(1)];
+        coalesce(&mut arr);
+        assert_eq!(arr, [None, None, Some(2), Some(2)]);
+    }
+
+    #[test]
+    fn coalesce_leave_two_after_ones() {
+        let mut arr = [None, Some(2), Some(1), Some(1)];
+        coalesce(&mut arr);
+        assert_eq!(arr, [None, None, Some(2), Some(2)]);
     }
 }
