@@ -1,23 +1,30 @@
 # 2048 game in rust
 
 - using https://lib.rs/crates/pixels
-- winit is a bit of a pain... but it means x-platform without an effort
+- winit is a bit of a pain... but it means x-platform without an effort,
+    hopefully
+
+## Build
+
+For whatever platform you're on:
+
+```sh
+cargo build 
+```
+
+For some other platform
+
+```sh
+cargo build --target [platform]
+```
+
+and `--release` to build in release mode.
+
+```sh
+cargo build --release --target x86_64-pc-windows-gnu
+```
 
 ## Coalesce Algorithm
-
-### Coalesce Tests
-
-x[None, None, None, None] => [None, None, None, None]
-x[None, None, None, Some(1)] => [None, None, None, Some(1)]
-x[None, None, Some(1), None] => [None, None, None, Some(1)]
-x[None, None, Some(1), Some(1)] => [None, None, None, Some(2)]
-x[None, Some(1), Some(1), Some(1)] => [None, None, Some(1), Some(2)]
-x[Some(1), Some(1), Some(1), Some(1)] => [None, None, Some(2), Some(2)]
-[Some(1), Some(1), Some(1), None] => [None, None, Some(1), Some(2)]
-[Some(1), None, Some(1), Some(1)] => [None, None, Some(1), Some(2)]
-[Some(1), None, Some(1), Some(2)] => [None, None, Some(2), Some(2)]
-[Some(1), None, Some(2), Some(1)] => [None, Some(1), Some(2), Some(1)]
-x[None, Some(2), Some(1), Some(1)] => [None, None, Some(2), Some(2)]
 
 for each item, from end to start
   shift right until you find a wall, or an item, then try to merge
@@ -25,9 +32,9 @@ for each item, from end to start
 
 ## Todo
 
+- render numbers
 - end of game
 - score
-- render numbers
-- gutter colors
 - draw game as inset within window
+- gutter colors
 - windows build
