@@ -1,10 +1,10 @@
 use pixels::{Error, Pixels, SurfaceTexture};
+use rand::{rngs::ThreadRng, thread_rng, Rng};
 use winit::dpi::LogicalSize;
 use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
-use rand::{rngs::ThreadRng, thread_rng, Rng};
 
 const WIDTH: u32 = 720;
 const HEIGHT: u32 = 720;
@@ -85,12 +85,13 @@ impl World {
         let mut nones = vec![];
         for i in 0..4 {
             for j in 0..4 {
-                if self.values[i][j] == None { nones.push((i,j)); }
+                if self.values[i][j] == None {
+                    nones.push((i, j));
+                }
             }
         }
         let random_index = self.rng.gen_range(0..nones.len());
-        let (i,j) = nones[random_index];
-        println!("adding a random block at {},{}", i, j);
+        let (i, j) = nones[random_index];
         self.values[i][j] = Some(2);
     }
 
@@ -99,9 +100,10 @@ impl World {
         let mut changed = false;
         if input.key_pressed(VirtualKeyCode::Down) {
             for i in 0..self.values.len() {
-                self.values[i] = coalesce(self.values[i]);
+                let coalesced = coalesce(self.values[i]);
+                if coalesced != self.values[i] { changed = true };
+                self.values[i] = coalesced;
             }
-            changed = true;
         }
         if input.key_pressed(VirtualKeyCode::Up) {
             for i in 0..self.values.len() {
@@ -109,43 +111,45 @@ impl World {
                 values.reverse();
                 values = coalesce(values);
                 values.reverse();
+                if values != self.values[i] { changed = true };
                 self.values[i] = values;
             }
-            changed = true;
         }
         if input.key_pressed(VirtualKeyCode::Right) {
             for i in 0..self.values[0].len() {
-                let mut values = [
+                let values = [
                     self.values[0][i],
                     self.values[1][i],
                     self.values[2][i],
                     self.values[3][i],
                 ];
-                values = coalesce(values);
-                self.values[0][i] = values[0];
-                self.values[1][i] = values[1];
-                self.values[2][i] = values[2];
-                self.values[3][i] = values[3];
+                let coalesced = coalesce(values);
+                if values != coalesced { changed = true };
+                self.values[0][i] = coalesced[0];
+                self.values[1][i] = coalesced[1];
+                self.values[2][i] = coalesced[2];
+                self.values[3][i] = coalesced[3];
             }
-            changed = true;
         }
         if input.key_pressed(VirtualKeyCode::Left) {
             for i in 0..self.values[0].len() {
-                let mut values = [
+                let values = [
                     self.values[3][i],
                     self.values[2][i],
                     self.values[1][i],
                     self.values[0][i],
                 ];
-                values = coalesce(values);
-                self.values[3][i] = values[0];
-                self.values[2][i] = values[1];
-                self.values[1][i] = values[2];
-                self.values[0][i] = values[3];
+                let coalesced = coalesce(values);
+                if values != coalesced { changed = true };
+                self.values[3][i] = coalesced[0];
+                self.values[2][i] = coalesced[1];
+                self.values[1][i] = coalesced[2];
+                self.values[0][i] = coalesced[3];
             }
-            changed = true;
         }
-        if changed { self.add_random_block(); }
+        if changed {
+            self.add_random_block();
+        }
     }
 
     /// Draw the `World` state to the frame buffer.
@@ -153,6 +157,7 @@ impl World {
     /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
     fn draw(&self, frame: &mut [u8]) {
         let cell_width = (WIDTH / 4) as usize;
+        let gutter_width: usize = 24;
 
         for (col, cells) in self.values.iter().enumerate() {
             for (row, cell) in cells.iter().enumerate() {
@@ -170,19 +175,25 @@ impl World {
                     Some(512) => [0xed, 0xc9, 0x50, 0xff],
                     Some(1024) => [0xed, 0xc5, 0x3f, 0xff],
                     Some(2048) => [0xed, 0xc2, 0x2e, 0xff],
-                    Some(_) => [0x48, 0xb2, 0xe8, 0xff], 
+                    Some(_) => [0x48, 0xb2, 0xe8, 0xff],
                 };
 
                 // where to paint in the frame?
                 // The frame has all the pixels, in rows WIDTH * 4 wide
-                // So, the slices to paint to are at 
+                // So, the slices to paint to are at
                 // row * WIDTH * 4 + col * cell_width * 4, and are cell_width * 4 in length
                 // and we want to do it cell_height times (square, so it's the cell_width)
 
-                let pixels_to_paint = std::iter::repeat(rgba).take(cell_width).flatten().collect::<Vec<_>>();
-                for i in 0..cell_width {
-                    let target_start = ((row * cell_width + i) * WIDTH as usize * 4) + (col as usize * cell_width * 4);
-                    frame[target_start..(target_start+cell_width*4)]
+                let pixels_to_paint = std::iter::repeat(rgba)
+                    .take(cell_width - gutter_width)
+                    .flatten()
+                    .collect::<Vec<_>>();
+
+                for i in 0..(cell_width - gutter_width) {
+                    let target_start =
+                        ((row * cell_width + i + gutter_width / 2) * WIDTH as usize * 4)
+                            + (col as usize * cell_width * 4 + gutter_width * 4);
+                    frame[target_start..(target_start + (cell_width - gutter_width) * 4)]
                         .copy_from_slice(&pixels_to_paint);
                 }
             }

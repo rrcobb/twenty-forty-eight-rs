@@ -25,8 +25,9 @@ for each item, from end to start
 
 ## Todo
 
-- gutters (colors?)
-- only add a random block when move was valid
 - end of game
 - score
 - render numbers
+- gutter colors
+- draw game as inset within window
+- windows build
