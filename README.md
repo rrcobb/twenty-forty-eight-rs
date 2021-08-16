@@ -23,4 +23,11 @@ for each item, from end to start
   shift right until you find a wall, or an item, then try to merge
     can merge if 1) same values, 2) hasn't been merged already this coalesce
 
+## Todo
 
+- gutters (colors?)
+- only add a random block when move was valid
+- end of game
+- score
+- render numbers
+- (code) flip iteration order to iterate through cells instead of pixels

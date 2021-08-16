@@ -82,33 +82,27 @@ impl World {
     }
 
     fn add_random_block(&mut self) {
-        let mut nones = 0;
-        for col in self.values {
-            for item in col {
-                if item == None { nones += 1; }
+        let mut nones = vec![];
+        for i in 0..4 {
+            for j in 0..4 {
+                if self.values[i][j] == None { nones.push((i,j)); }
             }
         }
-        let random_none = self.rng.gen_range(0..nones);
-        for i in 0..self.values.len() {
-            for j in 0..self.values[i].len() {
-                if self.values[i][j] == None { 
-                    if (i * 4 + j) == random_none {
-                        self.values[i][j] = Some(2);
-                    }
-                }
-            }
-        }
+        let random_index = self.rng.gen_range(0..nones.len());
+        let (i,j) = nones[random_index];
+        println!("adding a random block at {},{}", i, j);
+        self.values[i][j] = Some(2);
     }
 
     /// Update the `World` internal state; coalesce and add a new box
     fn update(&mut self, input: &WinitInputHelper) {
+        let mut changed = false;
         if input.key_pressed(VirtualKeyCode::Down) {
             for i in 0..self.values.len() {
                 self.values[i] = coalesce(self.values[i]);
             }
-            self.add_random_block();
+            changed = true;
         }
-        // need to reverse before and after?
         if input.key_pressed(VirtualKeyCode::Up) {
             for i in 0..self.values.len() {
                 let mut values = self.values[i];
@@ -117,7 +111,7 @@ impl World {
                 values.reverse();
                 self.values[i] = values;
             }
-            self.add_random_block();
+            changed = true;
         }
         if input.key_pressed(VirtualKeyCode::Right) {
             for i in 0..self.values[0].len() {
@@ -133,7 +127,7 @@ impl World {
                 self.values[2][i] = values[2];
                 self.values[3][i] = values[3];
             }
-            self.add_random_block();
+            changed = true;
         }
         if input.key_pressed(VirtualKeyCode::Left) {
             for i in 0..self.values[0].len() {
@@ -149,8 +143,9 @@ impl World {
                 self.values[1][i] = values[2];
                 self.values[0][i] = values[3];
             }
-            self.add_random_block();
+            changed = true;
         }
+        if changed { self.add_random_block(); }
     }
 
     /// Draw the `World` state to the frame buffer.
@@ -161,15 +156,13 @@ impl World {
 
         // for each of the cells in values
         // check whether this pixel is in that cell
-        // TODO: flip to iterate through values instead of through pixels
-        // TODO: Add gutter between items
         for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
             let x = (i % WIDTH as usize) as i16;
             let y = (i / WIDTH as usize) as i16;
 
             let rgba = match self.values[(x / cell_width) as usize][(y / cell_width) as usize] {
                 None => [0x00, 0x00, 0x00, 0xff],
-                Some(2) => [0xee, 0xe4, 0xda, 0xff],
+                Some(2) => [0xff, 0xf4, 0xea, 0xff],
                 Some(4) => [0xee, 0xe1, 0xc9, 0xff],
                 Some(8) => [0xf3, 0xb2, 0x7a, 0xff],
                 Some(16) => [0xf6, 0x96, 0x64, 0xff],
