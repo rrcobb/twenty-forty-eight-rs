@@ -4,6 +4,7 @@ use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
+use rand::{rngs::ThreadRng, thread_rng, Rng};
 
 const WIDTH: u32 = 720;
 const HEIGHT: u32 = 720;
@@ -66,21 +67,37 @@ fn main() -> Result<(), Error> {
 /// 4x4 grid of values
 struct World {
     values: [[Option<u32>; 4]; 4],
+    rng: ThreadRng,
 }
 
 impl World {
     /// Create a new `World` instance with empty values
     fn new() -> Self {
         let mut empty = Self {
-            values: [[None; 4]; 4]
+            values: [[None; 4]; 4],
+            rng: thread_rng(),
         };
         empty.add_random_block();
         empty
     }
 
     fn add_random_block(&mut self) {
-        // put a Some where one of the None's are
-        self.values[2][1] = Some(2);
+        let mut nones = 0;
+        for col in self.values {
+            for item in col {
+                if item == None { nones += 1; }
+            }
+        }
+        let random_none = self.rng.gen_range(0..nones);
+        for i in 0..self.values.len() {
+            for j in 0..self.values[i].len() {
+                if self.values[i][j] == None { 
+                    if (i * 4 + j) == random_none {
+                        self.values[i][j] = Some(2);
+                    }
+                }
+            }
+        }
     }
 
     /// Update the `World` internal state; coalesce and add a new box
@@ -89,6 +106,7 @@ impl World {
             for i in 0..self.values.len() {
                 self.values[i] = coalesce(self.values[i]);
             }
+            self.add_random_block();
         }
         // need to reverse before and after?
         if input.key_pressed(VirtualKeyCode::Up) {
@@ -99,6 +117,7 @@ impl World {
                 values.reverse();
                 self.values[i] = values;
             }
+            self.add_random_block();
         }
         if input.key_pressed(VirtualKeyCode::Right) {
             for i in 0..self.values[0].len() {
@@ -114,6 +133,7 @@ impl World {
                 self.values[2][i] = values[2];
                 self.values[3][i] = values[3];
             }
+            self.add_random_block();
         }
         if input.key_pressed(VirtualKeyCode::Left) {
             for i in 0..self.values[0].len() {
@@ -129,8 +149,8 @@ impl World {
                 self.values[1][i] = values[2];
                 self.values[0][i] = values[3];
             }
+            self.add_random_block();
         }
-        self.add_random_block();
     }
 
     /// Draw the `World` state to the frame buffer.
@@ -202,49 +222,49 @@ mod tests {
     #[test]
     fn coalesce_nones() {
         let mut arr = [None, None, None, None];
-        coalesce(&mut arr);
+        arr = coalesce(arr);
         assert_eq!(arr, [None, None, None, None]);
     }
 
     #[test]
     fn coalesce_one() {
         let mut arr = [None, None, None, Some(1)];
-        coalesce(&mut arr);
+        arr = coalesce(arr);
         assert_eq!(arr, [None, None, None, Some(1)]);
     }
 
     #[test]
     fn coalesce_right() {
         let mut arr = [None, None, Some(1), None];
-        coalesce(&mut arr);
+        arr = coalesce(arr);
         assert_eq!(arr, [None, None, None, Some(1)]);
     }
 
     #[test]
     fn coalesce_add() {
         let mut arr = [None, None, Some(1), Some(1)];
-        coalesce(&mut arr);
+        arr = coalesce(arr);
         assert_eq!(arr, [None, None, None, Some(2)]);
     }
 
     #[test]
     fn coalesce_add_extra() {
         let mut arr = [None, Some(1), Some(1), Some(1)];
-        coalesce(&mut arr);
+        arr = coalesce(arr);
         assert_eq!(arr, [None, None, Some(1), Some(2)]);
     }
 
     #[test]
     fn coalesce_all_ones() {
         let mut arr = [Some(1), Some(1), Some(1), Some(1)];
-        coalesce(&mut arr);
+        arr = coalesce(arr);
         assert_eq!(arr, [None, None, Some(2), Some(2)]);
     }
 
     #[test]
     fn coalesce_leave_two_after_ones() {
         let mut arr = [None, Some(2), Some(1), Some(1)];
-        coalesce(&mut arr);
+        arr = coalesce(arr);
         assert_eq!(arr, [None, None, Some(2), Some(2)]);
     }
 }
