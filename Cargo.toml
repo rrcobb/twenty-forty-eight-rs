@@ -4,13 +4,6 @@ description = "A clone of the 2048 game"
 version = "0.1.0"
 edition = "2018"
 
-[package.metadata.bundle]
-name = "twenty-forty-eight"
-identifier = "com.example.twenty-forty-eight"
-version = "1.0.0"
-category = "Game"
-short_description = "a clone of the 2048 game"
-
 [dependencies]
 pixels = "0.5.0"
 rand = "0.8.4"

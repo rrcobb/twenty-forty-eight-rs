@@ -24,6 +24,14 @@ and `--release` to build in release mode.
 cargo build --release --target x86_64-pc-windows-gnu
 ```
 
+And then, to get the .dll files included correctly:
+
+```
+libwinpthread-1.dll
+libstdc++-6.dll
+libgcc_s_seh-1.dll
+```
+
 ## Coalesce Algorithm
 
 for each item, from end to start
