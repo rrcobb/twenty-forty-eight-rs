@@ -152,31 +152,40 @@ impl World {
     ///
     /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
     fn draw(&self, frame: &mut [u8]) {
-        let cell_width = (WIDTH / 4) as i16;
+        let cell_width = (WIDTH / 4) as usize;
 
-        // for each of the cells in values
-        // check whether this pixel is in that cell
-        for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
-            let x = (i % WIDTH as usize) as i16;
-            let y = (i / WIDTH as usize) as i16;
+        for (col, cells) in self.values.iter().enumerate() {
+            for (row, cell) in cells.iter().enumerate() {
+                // color based on the value of the cell
+                let rgba: [u8; 4] = match cell {
+                    None => [0x00, 0x00, 0x00, 0xff],
+                    Some(2) => [0xff, 0xf4, 0xea, 0xff],
+                    Some(4) => [0xee, 0xe1, 0xc9, 0xff],
+                    Some(8) => [0xf3, 0xb2, 0x7a, 0xff],
+                    Some(16) => [0xf6, 0x96, 0x64, 0xff],
+                    Some(32) => [0xf7, 0x7c, 0x5f, 0xff],
+                    Some(64) => [0xf7, 0x5f, 0x3b, 0xff],
+                    Some(128) => [0xed, 0xd0, 0x73, 0xff],
+                    Some(256) => [0xed, 0xcc, 0x62, 0xff],
+                    Some(512) => [0xed, 0xc9, 0x50, 0xff],
+                    Some(1024) => [0xed, 0xc5, 0x3f, 0xff],
+                    Some(2048) => [0xed, 0xc2, 0x2e, 0xff],
+                    Some(_) => [0x48, 0xb2, 0xe8, 0xff], 
+                };
 
-            let rgba = match self.values[(x / cell_width) as usize][(y / cell_width) as usize] {
-                None => [0x00, 0x00, 0x00, 0xff],
-                Some(2) => [0xff, 0xf4, 0xea, 0xff],
-                Some(4) => [0xee, 0xe1, 0xc9, 0xff],
-                Some(8) => [0xf3, 0xb2, 0x7a, 0xff],
-                Some(16) => [0xf6, 0x96, 0x64, 0xff],
-                Some(32) => [0xf7, 0x7c, 0x5f, 0xff],
-                Some(64) => [0xf7, 0x5f, 0x3b, 0xff], // f75f3b
-                Some(128) => [0xed, 0xd0, 0x73, 0xff],
-                Some(256) => [0xed, 0xcc, 0x62, 0xff],
-                Some(512) => [0xed, 0xc9, 0x50, 0xff], // edc950
-                Some(1024) => [0xed, 0xc5, 0x3f, 0xff], // edc53f
-                Some(2048) => [0xed, 0xc2, 0x2e, 0xff], // edc22e
-                Some(_) => [0x48, 0xb2, 0xe8, 0xff], 
-            };
+                // where to paint in the frame?
+                // The frame has all the pixels, in rows WIDTH * 4 wide
+                // So, the slices to paint to are at 
+                // row * WIDTH * 4 + col * cell_width * 4, and are cell_width * 4 in length
+                // and we want to do it cell_height times (square, so it's the cell_width)
 
-            pixel.copy_from_slice(&rgba);
+                let pixels_to_paint = std::iter::repeat(rgba).take(cell_width).flatten().collect::<Vec<_>>();
+                for i in 0..cell_width {
+                    let target_start = ((row * cell_width + i) * WIDTH as usize * 4) + (col as usize * cell_width * 4);
+                    frame[target_start..(target_start+cell_width*4)]
+                        .copy_from_slice(&pixels_to_paint);
+                }
+            }
         }
     }
 }

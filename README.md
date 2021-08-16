@@ -30,4 +30,3 @@ for each item, from end to start
 - end of game
 - score
 - render numbers
-- (code) flip iteration order to iterate through cells instead of pixels
