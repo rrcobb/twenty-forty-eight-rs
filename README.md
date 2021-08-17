@@ -12,24 +12,19 @@ For whatever platform you're on:
 cargo build 
 ```
 
-For some other platform
+### cross-compile for windows 
 
-```sh
-cargo build --target [platform]
-```
-
-and `--release` to build in release mode.
+Ensure the target `x86_64-pc-windows-gnu` is added with rustup. (`rustup target
+list` and `rustup target add`)
 
 ```sh
 cargo build --release --target x86_64-pc-windows-gnu
 ```
 
-And then, to get the .dll files included correctly:
+Then, zip up the .dll and .exe files from `target/x86_64-pc-windows-gnu/release/` and send them off!
 
-```
-libwinpthread-1.dll
-libstdc++-6.dll
-libgcc_s_seh-1.dll
+```sh
+./release_windows.sh
 ```
 
 ## Coalesce Algorithm
